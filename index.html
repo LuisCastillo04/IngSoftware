@@ -3,11 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#152139" />
+    <meta name="theme-color" content="#142039" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Atlas interactivo para aprender y comparar cinco estilos arquitectónicos de software." />
     <title>Atlas de arquitectura | Aprende estilos de software</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <script>
+      // Aplica el tema guardado antes del primer pintado para evitar un destello.
+      try { const theme = localStorage.getItem("atlas-theme"); if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme; } catch (_) {}
+    </script>
     <link rel="stylesheet" href="./styles.css" />
+    <script src="./icons.js" defer></script>
     <script src="./content.js" defer></script>
     <script src="./quiz-content.js" defer></script>
     <script src="./charts.js" defer></script>
@@ -16,55 +22,53 @@
   <body>
     <a class="skip-link" href="#main-content">Ir al contenido</a>
     <div class="app-shell">
-      <aside class="sidebar" aria-label="Navegación principal">
-        <div class="brand" role="img" aria-label="Atlas de arquitectura">
+      <aside id="sidebar" class="sidebar" aria-label="Navegación principal">
+        <a class="brand" href="#inicio" aria-label="Atlas de arquitectura, ir al inicio">
           <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span class="brand-copy"><strong>ATLAS<span class="brand-dot">.</span></strong><small>ARQUITECTURA DE SOFTWARE</small></span>
-        </div>
-
-        <p class="sidebar-label">EXPLORA</p>
-        <nav class="primary-nav" aria-label="Secciones">
-          <button type="button" class="nav-link" data-view="home">
-            <span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span>
-          </button>
-          <button type="button" class="nav-link" data-view="compare">
-            <span class="nav-icon" aria-hidden="true">▦</span><span>Comparar estilos</span>
-          </button>
-          <button type="button" class="nav-link" data-view="quiz">
-            <span class="nav-icon" aria-hidden="true">◇</span><span>Evaluación final</span>
-            <span id="nav-quiz-lock" class="nav-trailing" aria-hidden="true">⌁</span>
-          </button>
-        </nav>
-
-        <div class="sidebar-divider"></div>
-        <p class="sidebar-label">LOS 5 ESTILOS</p>
-        <nav id="style-nav" class="style-nav" aria-label="Estilos arquitectónicos"></nav>
-
-        <div class="sidebar-bottom">
-          <div class="sidebar-progress">
-            <div class="sidebar-progress-top"><span>Tu recorrido</span><strong id="sidebar-progress-count">0 / 5</strong></div>
-            <div class="progress-track"><span id="sidebar-progress-bar"></span></div>
-            <small>Estilos completados</small>
-          </div>
-          <p class="sidebar-note">Aprende a elegir una arquitectura según el problema, no por moda.</p>
-        </div>
+          <span class="brand-copy"><strong>ATLAS<span class="brand-dot">.</span></strong><small>Arquitectura de software</small></span>
+        </a>
+        <div id="sidebar-body" class="sidebar-body"></div>
       </aside>
+      <div id="scrim" class="scrim" hidden></div>
 
       <div class="workspace">
         <header class="topbar">
-          <div class="topbar-context"><span class="topbar-line" aria-hidden="true"></span><span>LABORATORIO DE DECISIONES TÉCNICAS</span></div>
+          <button id="menu-button" type="button" class="icon-button menu-button" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú de navegación"></button>
+          <nav id="breadcrumb" class="breadcrumb" aria-label="Ruta de navegación"></nav>
           <div class="topbar-actions">
-            <span class="save-hint"><span class="save-dot" aria-hidden="true"></span> Avance guardado en este navegador</span>
-            <button id="reset-progress" type="button" class="text-button">Reiniciar avance</button>
+            <span class="save-hint" title="Tu avance se guarda automáticamente en este navegador"><span class="save-dot" aria-hidden="true"></span>Avance guardado</span>
+            <button id="theme-toggle" type="button" class="icon-button" aria-label="Cambiar a tema oscuro"></button>
+            <button id="reset-progress" type="button" class="button button-quiet button-sm"></button>
           </div>
         </header>
-        <main id="main-content" tabindex="-1"></main>
+
+        <main id="main-content" tabindex="-1" aria-busy="true">
+          <!-- Estado de carga: se sustituye en cuanto app.js pinta la primera vista. -->
+          <div class="skeleton" aria-hidden="true">
+            <div class="sk sk-hero"></div>
+            <div class="sk-row"><div class="sk sk-kpi"></div><div class="sk sk-kpi"></div><div class="sk sk-kpi"></div><div class="sk sk-kpi"></div></div>
+            <div class="sk-row"><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div></div>
+          </div>
+          <noscript><div class="panel"><h1>Se necesita JavaScript</h1><p>Atlas es una aplicación interactiva. Activa JavaScript en tu navegador para usarla.</p></div></noscript>
+        </main>
+
         <footer class="site-footer">
           <span>ATLAS · Arquitectura de software</span>
           <span>Una guía para comparar decisiones y sus compromisos.</span>
         </footer>
       </div>
     </div>
+
+    <dialog id="confirm-dialog" class="dialog" aria-labelledby="dialog-title" aria-describedby="dialog-text">
+      <form method="dialog">
+        <h2 id="dialog-title"></h2>
+        <p id="dialog-text"></p>
+        <div class="dialog-actions">
+          <button type="submit" value="cancel" class="button button-ghost" autofocus>Cancelar</button>
+          <button type="submit" value="confirm" class="button button-danger" id="dialog-confirm"></button>
+        </div>
+      </form>
+    </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </body>
 </html>
