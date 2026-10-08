@@ -23,10 +23,13 @@
     <a class="skip-link" href="#main-content">Ir al contenido</a>
     <div class="app-shell">
       <aside id="sidebar" class="sidebar" aria-label="Navegación principal">
-        <a class="brand" href="#inicio" aria-label="Atlas de arquitectura, ir al inicio">
-          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span class="brand-copy"><strong>ATLAS<span class="brand-dot">.</span></strong><small>Arquitectura de software</small></span>
-        </a>
+        <div class="sidebar-head">
+          <a class="brand" href="#inicio" aria-label="Atlas de arquitectura, ir al inicio">
+            <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            <span class="brand-copy"><strong>ATLAS<span class="brand-dot">.</span></strong><small>Arquitectura de software</small></span>
+          </a>
+          <button id="sidebar-toggle" type="button" class="icon-button sidebar-toggle" aria-controls="sidebar" aria-expanded="true" aria-label="Ocultar menú lateral"></button>
+        </div>
         <div id="sidebar-body" class="sidebar-body"></div>
       </aside>
       <div id="scrim" class="scrim" hidden></div>

@@ -235,17 +235,40 @@
   const sidebar = $("#sidebar");
   const scrim = $("#scrim");
   const menuButton = $("#menu-button");
+  const sidebarToggle = $("#sidebar-toggle");
+  // En pantallas grandes el botón oculta/muestra la barra lateral (el contenido ocupa todo el ancho);
+  // en tablet y móvil abre y cierra el cajón.
+  const SIDEBAR_KEY = "atlas-sidebar-collapsed";
+  const appShell = document.querySelector(".app-shell");
+  let sidebarCollapsed = false;
+  try { sidebarCollapsed = localStorage.getItem(SIDEBAR_KEY) === "1"; } catch (_) { /* Sin almacenamiento: se muestra expandida. */ }
+
   function setDrawer(open, { restoreFocus = false } = {}) {
-    const isOpen = open && mobileNav.matches;
+    const mobile = mobileNav.matches;
+    const isOpen = mobile && open;
+    const visible = mobile ? isOpen : !sidebarCollapsed;
     sidebar.classList.toggle("open", isOpen);
+    appShell.classList.toggle("is-collapsed", !mobile && sidebarCollapsed);
     scrim.hidden = !isOpen;
-    menuButton.setAttribute("aria-expanded", String(isOpen));
-    menuButton.setAttribute("aria-label", isOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación");
-    menuButton.innerHTML = icon(isOpen ? "close" : "menu", 22);
-    sidebar.inert = mobileNav.matches && !isOpen; // fuera de pantalla: no recibe foco ni lectores
+    menuButton.setAttribute("aria-expanded", String(visible));
+    menuButton.setAttribute("aria-label", visible ? (mobile ? "Cerrar menú de navegación" : "Ocultar menú lateral") : (mobile ? "Abrir menú de navegación" : "Mostrar menú lateral"));
+    menuButton.title = menuButton.getAttribute("aria-label");
+    menuButton.innerHTML = icon("menu", 22);
+    sidebarToggle.setAttribute("aria-expanded", String(visible));
+    sidebarToggle.setAttribute("aria-label", mobile ? "Cerrar menú de navegación" : "Ocultar menú lateral");
+    sidebarToggle.title = sidebarToggle.getAttribute("aria-label");
+    sidebarToggle.innerHTML = icon(mobile ? "close" : "menu", 22);
+    sidebar.inert = !visible; // oculta: no recibe foco ni lectores de pantalla
     document.body.style.overflow = isOpen ? "hidden" : "";
     if (isOpen) sidebar.querySelector(".nav-link")?.focus();
-    else if (restoreFocus) menuButton.focus();
+    else if (restoreFocus) setTimeout(() => (visible ? sidebarToggle : menuButton).focus(), mobile ? 0 : 320); // espera a la transición
+  }
+
+  function toggleSidebar() {
+    if (mobileNav.matches) { setDrawer(!sidebar.classList.contains("open"), { restoreFocus: true }); return; }
+    sidebarCollapsed = !sidebarCollapsed;
+    try { localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? "1" : "0"); } catch (_) { /* Solo esta sesión. */ }
+    setDrawer(false, { restoreFocus: true });
   }
 
   /* ---------- Diagramas ---------- */
@@ -731,7 +754,7 @@
       return;
     }
     if (target.id === "theme-toggle") { toggleTheme(); return; }
-    if (target.id === "menu-button") { setDrawer(!sidebar.classList.contains("open"), { restoreFocus: true }); return; }
+    if (target.id === "menu-button" || target.id === "sidebar-toggle") { toggleSidebar(); return; }
   });
 
   document.addEventListener("change", event => {
