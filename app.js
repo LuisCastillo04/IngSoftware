@@ -131,6 +131,7 @@
     const hash = decodeURIComponent(location.hash.replace(/^#/, ""));
     if (hash === "comparar") return { view: "compare" };
     if (hash === "evaluacion") return { view: "quiz" };
+    if (hash === "estilos") return { view: "home", section: "styles-section" };
     if (hash.startsWith("estilo/")) {
       const id = hash.slice(7);
       if (styleById[id]) return { view: "style", id };
@@ -208,7 +209,7 @@
     const crumbs = [{ label: "Inicio", href: hrefFor("home") }];
     if (active.view === "compare") crumbs.push({ label: "Comparar estilos" });
     else if (active.view === "quiz") crumbs.push({ label: state.quiz?.submitted && allComplete() ? "Evaluación final · Resultado" : "Evaluación final" });
-    else if (active.view === "style") crumbs.push({ label: "Estilos" }, { label: styleById[active.id].name });
+    else if (active.view === "style") crumbs.push({ label: "Estilos", href: "#estilos" }, { label: styleById[active.id].name });
     else crumbs[0] = { label: "Inicio" };
     $("#breadcrumb").innerHTML = `<ol>${crumbs.map((crumb, index) => {
       const last = index === crumbs.length - 1;
@@ -358,7 +359,7 @@
         ${quizKpi}
       </section>
 
-      <div class="section-head"><div><span class="eyebrow">Ruta de aprendizaje</span><h2>Conoce los cinco estilos</h2></div><p>Abre una ficha, revisa su presentación y haz al menos una pregunta para completarla.</p></div>
+      <div class="section-head" id="styles-section"><div><span class="eyebrow">Ruta de aprendizaje</span><h2 tabindex="-1">Conoce los cinco estilos</h2></div><p>Abre una ficha, revisa su presentación y haz al menos una pregunta para completarla.</p></div>
       <section class="style-grid" aria-label="Cinco estilos arquitectónicos">
         ${data.styles.map((style, index) => {
           const average = charts.average(style, data.criteria);
@@ -624,7 +625,11 @@
     window.scrollTo({ top: 0, behavior: "instant" });
     document.title = `${current.view === "style" ? styleById[current.id].name : current.view === "compare" ? "Comparar estilos" : current.view === "quiz" ? "Evaluación final" : "Inicio"} | Atlas de arquitectura`;
     setupMotion();
-    if (focusHeading) {
+    if (current.section) {
+      const target = document.getElementById(current.section);
+      target?.scrollIntoView({ block: "start" }); // el scroll-padding del html deja libre la barra superior
+      target?.querySelector("h2")?.focus({ preventScroll: true });
+    } else if (focusHeading) {
       const heading = main.querySelector("h1");
       if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
     }
