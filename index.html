@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#152139" />
+    <meta name="description" content="Atlas interactivo para aprender y comparar cinco estilos arquitectónicos de software." />
+    <title>Atlas de arquitectura | Aprende estilos de software</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./content.js" defer></script>
+    <script src="./quiz-content.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Ir al contenido</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand" role="img" aria-label="Atlas de arquitectura">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span class="brand-copy"><strong>ATLAS<span class="brand-dot">.</span></strong><small>ARQUITECTURA DE SOFTWARE</small></span>
+        </div>
+
+        <p class="sidebar-label">EXPLORA</p>
+        <nav class="primary-nav" aria-label="Secciones">
+          <button type="button" class="nav-link" data-view="home">
+            <span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span>
+          </button>
+          <button type="button" class="nav-link" data-view="compare">
+            <span class="nav-icon" aria-hidden="true">▦</span><span>Comparar estilos</span>
+          </button>
+          <button type="button" class="nav-link" data-view="quiz">
+            <span class="nav-icon" aria-hidden="true">◇</span><span>Evaluación final</span>
+            <span id="nav-quiz-lock" class="nav-trailing" aria-hidden="true">⌁</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-divider"></div>
+        <p class="sidebar-label">LOS 5 ESTILOS</p>
+        <nav id="style-nav" class="style-nav" aria-label="Estilos arquitectónicos"></nav>
+
+        <div class="sidebar-bottom">
+          <div class="sidebar-progress">
+            <div class="sidebar-progress-top"><span>Tu recorrido</span><strong id="sidebar-progress-count">0 / 5</strong></div>
+            <div class="progress-track"><span id="sidebar-progress-bar"></span></div>
+            <small>Estilos completados</small>
+          </div>
+          <p class="sidebar-note">Aprende a elegir una arquitectura según el problema, no por moda.</p>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="topbar-context"><span class="topbar-line" aria-hidden="true"></span><span>LABORATORIO DE DECISIONES TÉCNICAS</span></div>
+          <div class="topbar-actions">
+            <span class="save-hint"><span class="save-dot" aria-hidden="true"></span> Avance guardado en este navegador</span>
+            <button id="reset-progress" type="button" class="text-button">Reiniciar avance</button>
+          </div>
+        </header>
+        <main id="main-content" tabindex="-1"></main>
+        <footer class="site-footer">
+          <span>ATLAS · Arquitectura de software</span>
+          <span>Una guía para comparar decisiones y sus compromisos.</span>
+        </footer>
+      </div>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
