@@ -6,11 +6,13 @@ Aplicación web educativa de una sola página para estudiar y comparar cinco est
 
 Abre `index.html` en un navegador moderno. No requiere instalación, servidor, cuenta ni conexión a Internet para las actividades principales.
 
-1. Abre una ficha y revisa su definición, diagrama, fortalezas, compromisos, casos y seis valoraciones justificadas.
+1. Abre una ficha y revisa su definición, diagrama, fortalezas, compromisos y casos. En el radar, selecciona cualquiera de los seis atributos para ver su valoración y explicación.
 2. Pulsa **Marcar como revisada** al terminar la presentación.
 3. Haz al menos una pregunta en **Entrevístame**. Se permiten hasta tres preguntas respondidas por estilo. Las preguntas ajenas al contenido no consumen un intento.
 4. Completa los cinco estilos para desbloquear la evaluación final de cinco preguntas: tres de dificultad media y dos de dificultad alta.
 5. Consulta la nota sobre 5.0, las respuestas correctas y las explicaciones. Puedes repetir la evaluación o reiniciar todo el avance.
+
+En **Comparar estilos**, usa los filtros de la gráfica de barras para ordenar los cinco estilos por un atributo de calidad. La tabla inferior ofrece una comparación de estructura y contexto. Las animaciones respetan la preferencia de movimiento reducido del sistema.
 
 El avance se guarda en el almacenamiento local del navegador. **Reiniciar avance** borra el progreso de esta aplicación en ese navegador.
 
@@ -26,6 +28,7 @@ Las estrellas son orientativas para una implementación típica. Cambian según 
 - `styles.css`: diseño adaptable para escritorio y móvil.
 - `content.js`: contenido de los cinco estilos y sus valoraciones.
 - `quiz-content.js`: banco de preguntas y explicaciones de la evaluación.
+- `charts.js`: radar y gráfica comparativa interactivos, sin bibliotecas externas.
 - `app.js`: navegación, diagramas, entrevista, progreso y evaluación.
 
 ## Fuentes de ampliación

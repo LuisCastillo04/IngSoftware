@@ -3,7 +3,7 @@
 
   const data = window.APP_DATA;
   const main = document.getElementById("main-content");
-  if (!data || !Array.isArray(data.styles) || data.styles.length !== 5 || !Array.isArray(window.QUIZ_BANK)) {
+  if (!data || !Array.isArray(data.styles) || data.styles.length !== 5 || !Array.isArray(window.QUIZ_BANK) || !window.ArchitectureCharts) {
     main.innerHTML = '<div class="panel"><h1>No se pudo cargar el contenido</h1><p>Comprueba que todos los archivos JavaScript estén en la misma carpeta y vuelve a abrir la página.</p></div>';
     return;
   }
@@ -25,13 +25,18 @@
   };
 
   const quizBank = window.QUIZ_BANK;
+  const charts = window.ArchitectureCharts;
+  const profileCriterionByStyle = Object.fromEntries(data.styles.map(style => [style.id, data.criteria[0].id]));
+  let comparisonCriterion = "scalability";
 
   const styleById = Object.fromEntries(data.styles.map(style => [style.id, style]));
   const questionById = Object.fromEntries(quizBank.map(question => [question.id, question]));
   const $ = selector => document.querySelector(selector);
   const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
   const normalize = value => String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let toastTimer;
+  let revealObserver;
 
   function initialState() {
     return {
@@ -97,8 +102,35 @@
 
   function navigate(view, id) {
     const hash = view === "style" ? `estilo/${id}` : ({ home: "inicio", compare: "comparar", quiz: "evaluacion" })[view];
-    if (location.hash === `#${hash}`) render();
+    if (location.hash === `#${hash}`) render({ focusHeading: true });
     else location.hash = hash;
+  }
+
+  function motionBehavior() {
+    return reducedMotion.matches ? "auto" : "smooth";
+  }
+
+  function setupMotion() {
+    main.classList.remove("view-enter");
+    void main.offsetWidth;
+    main.classList.add("view-enter");
+    revealObserver?.disconnect();
+    if (reducedMotion.matches || !("IntersectionObserver" in window)) return;
+    revealObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add("is-visible");
+        revealObserver.unobserve(entry.target);
+      }
+    }, { threshold: 0.08, rootMargin: "0px 0px -3% 0px" });
+    document.documentElement.classList.add("motion-ready");
+    const selectors = ".overview-stat, .style-card, .panel, .unlock-banner, .learning-step, .compare-table-wrap, .chart-comparison, .question-card, .review-question, .next-step";
+    main.querySelectorAll(selectors).forEach((element, index) => {
+      element.classList.add("reveal");
+      element.style.setProperty("--reveal-delay", `${(index % 3) * 65}ms`);
+      if (element.getBoundingClientRect().top < window.innerHeight * 0.92) element.classList.add("is-visible");
+      else revealObserver.observe(element);
+    });
   }
 
   function renderSidebar(active) {
@@ -116,17 +148,14 @@
     $("#nav-quiz-lock").textContent = allComplete() ? "↗" : "⌁";
   }
 
-  function stars(score) {
-    return `<span class="stars" role="img" aria-label="${score} de 5 estrellas"><span aria-hidden="true">${"★".repeat(score)}</span><span class="empty" aria-hidden="true">${"★".repeat(5 - score)}</span></span>`;
-  }
-
-  function svgDiagram(style) {
+  function svgDiagram(style, instance = "primary") {
     const id = style.id;
+    const markerId = `arrow-${id}-${instance}`;
     const accent = palette[id];
     const outline = "#8fa2b7";
-    const text = (x, y, label, size = 16, weight = 700, anchor = "middle") => `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="#253b58" font-family="Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="${weight}">${escapeHTML(label)}</text>`;
-    const box = (x, y, width, height, fill = "#fff", stroke = outline, radius = 14) => `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
-    const connector = (x1, y1, x2, y2, dashed = false) => `<path d="M ${x1} ${y1} L ${x2} ${y2}" stroke="#7288a1" stroke-width="3" stroke-linecap="round" ${dashed ? 'stroke-dasharray="6 7"' : ""} marker-end="url(#arrow-${id})"/>`;
+    const text = (x, y, label, size = 16, weight = 700, anchor = "middle") => `<text class="diagram-label" x="${x}" y="${y}" text-anchor="${anchor}" fill="#253b58" font-family="Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="${weight}">${escapeHTML(label)}</text>`;
+    const box = (x, y, width, height, fill = "#fff", stroke = outline, radius = 14) => `<rect class="diagram-box" x="${x}" y="${y}" width="${width}" height="${height}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    const connector = (x1, y1, x2, y2, dashed = false) => `<path class="diagram-link ${dashed ? "is-dashed" : ""}" d="M ${x1} ${y1} L ${x2} ${y2}" stroke="#7288a1" stroke-width="3" stroke-linecap="round" ${dashed ? 'stroke-dasharray="6 7"' : ""} marker-end="url(#${markerId})"/>`;
     let shape = "";
     if (id === "layered") {
       [
@@ -149,7 +178,7 @@
         shape += connector(310, 58, x + 89, 100, true);
         shape += box(x, 105, 178, 76, "#fff", outline, 12) + text(x + 89, 149, label, 15);
         shape += connector(x + 89, 182, x + 89, 220);
-        shape += `<ellipse cx="${x + 89}" cy="235" rx="59" ry="19" fill="${accent}" stroke="${accent}" stroke-width="2"/>`;
+        shape += `<ellipse class="diagram-box" cx="${x + 89}" cy="235" rx="59" ry="19" fill="${accent}" stroke="${accent}" stroke-width="2"/>`;
         shape += text(x + 89, 240, "Datos", 13);
       });
     } else if (id === "microkernel") {
@@ -167,7 +196,7 @@
         shape += box(x, y, 160, 69, "#fff", outline, 12) + text(x + 80, y + 41, label, 14);
       });
     }
-    return `<svg viewBox="0 0 620 300" role="img" aria-label="Diagrama de ${escapeHTML(style.name)}: ${escapeHTML(style.diagram.caption)}" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrow-${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7288a1"/></marker></defs>${shape}</svg>`;
+    return `<svg class="architecture-diagram" viewBox="0 0 620 300" role="img" aria-label="Diagrama de ${escapeHTML(style.name)}: ${escapeHTML(style.diagram.caption)}" xmlns="http://www.w3.org/2000/svg"><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7288a1"/></marker></defs>${shape}</svg>`;
   }
 
   function heroArt() {
@@ -196,7 +225,7 @@
       <section class="style-grid" aria-label="Cinco estilos arquitectónicos">
         ${data.styles.map((style, index) => `
           <article class="style-card" style="--accent:${palette[style.id]}">
-            <div class="style-card-media">${svgDiagram(style)}</div>
+            <div class="style-card-media">${svgDiagram(style, "card")}</div>
             <div class="style-card-body">
               <div class="style-card-top"><span class="style-number">ESTILO 0${index + 1}</span><span class="state-pill ${statusOf(style.id)}">${statusLabel(style.id)}</span></div>
               <h3>${escapeHTML(style.name)}</h3>
@@ -224,9 +253,10 @@
     const answered = entry.exchanges.length;
     main.innerHTML = `
       <div class="breadcrumb"><button type="button" data-view="home">Inicio</button><span aria-hidden="true">›</span><strong>${escapeHTML(style.name)}</strong></div>
+      <nav class="mobile-style-switcher" aria-label="Cambiar estilo arquitectónico">${data.styles.map(item => `<button type="button" data-style="${item.id}" class="${item.id === id ? "active" : ""}" ${item.id === id ? 'aria-current="page"' : ""}>${escapeHTML(item.shortName)}</button>`).join("")}</nav>
       <section class="profile-hero" style="--accent:${palette[id]}">
         <div class="profile-copy"><span class="eyebrow">ESTILO 0${index + 1} · ${escapeHTML(style.eyebrow)}</span><h1>${escapeHTML(style.name)}</h1><p class="intro">“${escapeHTML(style.intro)}”</p><div class="profile-meta"><span class="meta-chip">Arquitectura de software</span><span class="meta-chip">${statusLabel(id)}</span><span class="meta-chip">Entrevista: ${answered}/3</span></div></div>
-        <div class="profile-visual">${svgDiagram(style)}</div>
+        <div class="profile-visual">${svgDiagram(style, "hero")}</div>
       </section>
       <div class="learning-path" aria-label="Pasos para completar este estilo">
         <div class="learning-step ${entry.reviewed ? "done" : ""}"><span class="learning-step-number">${entry.reviewed ? "✓" : "1"}</span><div><strong>Revisa la presentación</strong><small>${entry.reviewed ? "Presentación marcada como revisada" : "Lee la ficha y márcala al final"}</small></div></div>
@@ -235,7 +265,7 @@
       <div class="content-layout" style="--accent:${palette[id]}">
         <div class="stack">
           <section class="panel" aria-labelledby="definition-title"><span class="panel-eyebrow">01 / EN POCAS PALABRAS</span><h2 id="definition-title">¿Quién soy y cómo funciono?</h2><div class="definition-callout"><p>${escapeHTML(style.definition)}</p></div><h3 style="margin-top:22px">Mi estructura</h3><p>${escapeHTML(style.structure)}</p></section>
-          <section class="panel diagram-panel" aria-labelledby="diagram-title"><span class="panel-eyebrow">02 / MAPA VISUAL</span><h2 id="diagram-title">Así me organizo</h2>${svgDiagram(style)}<p class="diagram-caption">${escapeHTML(style.diagram.caption)}</p></section>
+          <section class="panel diagram-panel" aria-labelledby="diagram-title"><span class="panel-eyebrow">02 / MAPA VISUAL</span><h2 id="diagram-title">Así me organizo</h2>${svgDiagram(style, "detail")}<p class="diagram-caption">${escapeHTML(style.diagram.caption)}</p></section>
           <div class="pros-cons">
             <section class="panel" aria-labelledby="strengths-title"><span class="panel-eyebrow">03 / A FAVOR</span><h2 id="strengths-title">Mis fortalezas</h2>${list(style.strengths)}</section>
             <section class="panel" aria-labelledby="weaknesses-title"><span class="panel-eyebrow">04 / A CONSIDERAR</span><h2 id="weaknesses-title">Mis compromisos</h2>${list(style.weaknesses, "list-clean cons")}</section>
@@ -243,9 +273,7 @@
           <section class="panel" aria-labelledby="cases-title"><span class="panel-eyebrow">05 / EN LA PRÁCTICA</span><h2 id="cases-title">¿Cuándo convengo?</h2>${list(style.recommended, "use-list")}<div class="scenario-box"><strong>Un caso cercano: ${escapeHTML(style.example.title)}</strong><p>${escapeHTML(style.example.scenario)} ${escapeHTML(style.example.why)}</p></div></section>
         </div>
         <div class="stack">
-          <section class="panel" aria-labelledby="ratings-title"><span class="panel-eyebrow">RADAR DE CALIDAD</span><h2 id="ratings-title">Cómo rindo</h2><p class="ratings-hint">Valoración didáctica de 1 a 5 para una implementación típica. ${escapeHTML(style.ratingCaveat)}</p><div class="rating-list">
-            ${data.criteria.map(criterion => `<div class="rating-row"><strong>${escapeHTML(criterion.label)}</strong>${stars(style.ratings[criterion.id].score)}<p>${escapeHTML(style.ratings[criterion.id].reason)}</p></div>`).join("")}
-          </div></section>
+          <section class="panel" aria-labelledby="ratings-title"><span class="panel-eyebrow">RADAR INTERACTIVO</span><h2 id="ratings-title">Cómo rindo</h2><p class="ratings-hint">Explora mis seis atributos de calidad. Las valoraciones van de 1 a 5 y dependen del contexto. ${escapeHTML(style.ratingCaveat)}</p><div id="profile-chart">${charts.profile(style, data.criteria, profileCriterionByStyle[id])}</div></section>
           <section class="panel" aria-labelledby="remember-title"><span class="panel-eyebrow">IDEA PARA RECORDAR</span><h2 id="remember-title">La decisión depende del contexto</h2><p>${escapeHTML(style.tagline)} Mis estrellas son una guía: el diseño, el tamaño, el equipo y la operación pueden cambiar el resultado.</p><p><a href="${source.url}" target="_blank" rel="noopener noreferrer" class="inline-link">Ampliar en ${escapeHTML(source.label)} ↗</a></p></section>
         </div>
       </div>
@@ -270,12 +298,12 @@
   function renderCompare() {
     main.innerHTML = `
       <div class="page-intro"><span class="eyebrow">UNA MIRADA EN CONJUNTO</span><h1>Comparar para decidir mejor.</h1><p>Cada estilo resuelve problemas distintos y varios pueden combinarse. Usa esta tabla como punto de partida y visita las fichas para revisar los compromisos.</p></div>
+      <div id="comparison-chart">${charts.comparison(data.styles, data.criteria, comparisonCriterion)}</div>
+      <div class="section-heading"><div><span class="eyebrow">MÁS ALLÁ DE LAS ESTRELLAS</span><h2>Qué cambia en la práctica</h2></div><p>La tabla resume estructura, ventajas, compromisos y contextos recomendados.</p></div>
       <div class="compare-table-wrap"><table class="compare-table"><caption class="sr-only">Comparación de cinco estilos arquitectónicos</caption><thead><tr><th>Estilo</th><th>Cómo se organiza</th><th>Fortaleza destacada</th><th>Compromiso principal</th><th>Situación apropiada</th></tr></thead><tbody>
         ${data.styles.map(style => `<tr><td class="style-name-cell">${escapeHTML(style.name)}<br><button type="button" data-style="${style.id}">Ver ficha ↗</button></td><td>${escapeHTML(style.structure)}</td><td>${escapeHTML(style.strengths[0])}</td><td>${escapeHTML(style.weaknesses[0])}</td><td>${escapeHTML(style.recommended[0])}</td></tr>`).join("")}
       </tbody></table></div>
       <p class="compare-note">Una aplicación puede, por ejemplo, ser monolítica en su despliegue y estar organizada por capas. Las puntuaciones dependen de la implementación y del contexto.</p>
-      <div class="section-heading"><div><span class="eyebrow">ATRIBUTOS DE CALIDAD</span><h2>Un perfil, no un veredicto</h2></div><p>Las estrellas ayudan a hacer preguntas. Cada ficha explica el motivo de su valoración.</p></div>
-      <div class="compare-ratings">${data.criteria.map(criterion => `<section class="compare-rating-card"><strong>${escapeHTML(criterion.label)}</strong><small>${escapeHTML(criterion.description)}</small><div class="compare-rating-lines">${data.styles.map(style => `<div class="compare-rating-line"><span>${escapeHTML(style.shortName)}</span>${stars(style.ratings[criterion.id].score)}</div>`).join("")}</div></section>`).join("")}</div>
       <div class="unlock-banner"><div><h3>¿Qué elegirías para tu proyecto?</h3><p>Revisa el escenario de cada ficha y explica qué atributo priorizas.</p></div><button class="button" type="button" data-style="${nextStyle().id}">Continuar recorrido <span class="button-arrow" aria-hidden="true">↗</span></button></div>`;
   }
 
@@ -330,7 +358,7 @@
     }).join("")}</section>`;
   }
 
-  function render() {
+  function render({ focusHeading = false } = {}) {
     const current = route();
     renderSidebar(current);
     if (current.view === "home") renderHome();
@@ -338,6 +366,12 @@
     else if (current.view === "compare") renderCompare();
     else renderQuiz();
     window.scrollTo({ top: 0, behavior: "instant" });
+    document.title = `${current.view === "style" ? styleById[current.id].name : current.view === "compare" ? "Comparar estilos" : current.view === "quiz" ? "Evaluación final" : "Inicio"} | Atlas de arquitectura`;
+    setupMotion();
+    if (focusHeading) {
+      const heading = main.querySelector("h1");
+      if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+    }
   }
 
   function getInterviewAnswer(style, question) {
@@ -372,15 +406,32 @@
   document.addEventListener("click", event => {
     const button = event.target.closest("button");
     if (!button) return;
+    if (button.dataset.profileCriterion) {
+      const current = route();
+      const criterion = button.dataset.profileCriterion;
+      if (current.view !== "style" || !data.criteria.some(item => item.id === criterion)) return;
+      profileCriterionByStyle[current.id] = criterion;
+      $("#profile-chart").innerHTML = charts.profile(styleById[current.id], data.criteria, criterion);
+      $("#profile-chart").querySelector(`[data-profile-criterion="${criterion}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    if (button.dataset.compareCriterion) {
+      const criterion = button.dataset.compareCriterion;
+      if (route().view !== "compare" || !data.criteria.some(item => item.id === criterion)) return;
+      comparisonCriterion = criterion;
+      $("#comparison-chart").innerHTML = charts.comparison(data.styles, data.criteria, criterion);
+      $("#comparison-chart").querySelector(`[data-compare-criterion="${criterion}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     if (button.dataset.style) { navigate("style", button.dataset.style); return; }
     if (button.dataset.view) { navigate(button.dataset.view); return; }
-    if (button.dataset.scroll) { document.getElementById(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    if (button.dataset.scroll) { document.getElementById(button.dataset.scroll)?.scrollIntoView({ behavior: motionBehavior(), block: "start" }); return; }
     if (button.dataset.review) {
       const id = button.dataset.review;
       state.progress[id].reviewed = true;
       persist(); renderSidebar(route()); renderStyle(id);
       toast(isComplete(id) ? "¡Estilo completado!" : "Presentación marcada como revisada. Ahora haz una pregunta.");
-      document.getElementById("interview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("interview")?.scrollIntoView({ behavior: motionBehavior(), block: "start" });
       return;
     }
     if (button.dataset.suggestion) {
@@ -390,7 +441,7 @@
     }
     if (button.dataset.retake) {
       state.quiz = null;
-      ensureQuiz(); render();
+      ensureQuiz(); render({ focusHeading: true });
       toast("Nuevo intento preparado.");
       return;
     }
@@ -421,17 +472,17 @@
       persist(); renderSidebar(current); renderStyle(current.id);
       toast(isComplete(current.id) ? "¡Estilo completado!" : "Pregunta respondida. Revisa la presentación para completar el estilo.");
       const exchanges = document.querySelectorAll(".exchange");
-      exchanges[exchanges.length - 1]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      exchanges[exchanges.length - 1]?.scrollIntoView({ behavior: motionBehavior(), block: "nearest" });
     }
     if (event.target.id === "quiz-form") {
       event.preventDefault();
       const missing = state.quiz.questionIds.filter(id => !Object.prototype.hasOwnProperty.call(state.quiz.answers, id));
       if (missing.length) {
         $("#quiz-error").textContent = `Responde las ${missing.length} pregunta${missing.length === 1 ? "" : "s"} pendiente${missing.length === 1 ? "" : "s"} antes de calificar.`;
-        document.querySelector(`input[name="${missing[0]}"]`)?.closest(".question-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        document.querySelector(`input[name="${missing[0]}"]`)?.closest(".question-card")?.scrollIntoView({ behavior: motionBehavior(), block: "center" });
         return;
       }
-      state.quiz.submitted = true; persist(); render();
+      state.quiz.submitted = true; persist(); render({ focusHeading: true });
     }
   });
 
@@ -444,6 +495,6 @@
     $("#quiz-error").textContent = "";
   });
 
-  window.addEventListener("hashchange", render);
+  window.addEventListener("hashchange", () => render({ focusHeading: true }));
   render();
 })();
